@@ -1,0 +1,391 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user profile, preferences, appearance, notification and AI assistant settings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "bio": { "type": "string", "maxLength": 500 },
+        "photoUrl": { "type": "string", "maxLength": 1000 },
+        "timeFormat": { "type": "string", "enum": ["12h", "24h"] },
+        "dateFormat": { "type": "string", "enum": ["MM/DD/YYYY", "DD/MM/YYYY", "YYYY-MM-DD"] },
+        "weekStart": { "type": "string", "enum": ["monday", "sunday"] },
+        "theme": { "type": "string", "enum": ["dark", "light", "system"] },
+        "defaultTaskMinutes": { "type": "number" },
+        "dailyPlanningTime": { "type": "string", "maxLength": 10 },
+        "quietHoursStart": { "type": "string", "maxLength": 10 },
+        "quietHoursEnd": { "type": "string", "maxLength": 10 },
+        "notificationsEnabled": { "type": "boolean" },
+        "voiceEnabled": { "type": "boolean" },
+        "assistantTone": { "type": "string", "enum": ["calm", "direct", "encouraging"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "email",
+        "displayName",
+        "timeFormat",
+        "dateFormat",
+        "weekStart",
+        "theme",
+        "dailyPlanningTime",
+        "quietHoursStart",
+        "quietHoursEnd",
+        "notificationsEnabled",
+        "voiceEnabled",
+        "assistantTone",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Personal task item with priority, schedule, duration, and relational links to project and goal.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["todo", "in_progress", "completed", "cancelled", "locked"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "dueDate": { "type": "string", "maxLength": 20 },
+        "scheduledTime": { "type": "string", "maxLength": 20 },
+        "category": { "type": "string", "maxLength": 60 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "goalId": { "type": "string", "maxLength": 128 },
+        "estimatedMinutes": { "type": "number" },
+        "activityType": { "type": "string", "enum": ["fixed", "deadline", "task", "time_block", "routine", "flexible", "optional"] },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "description",
+        "status",
+        "priority",
+        "dueDate",
+        "scheduledTime",
+        "category",
+        "projectId",
+        "goalId",
+        "estimatedMinutes",
+        "activityType",
+        "isCompleted",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Multi-step personal project linked to goals and tasks.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["planning", "active", "on_hold", "completed", "archived", "locked"] },
+        "priority": { "type": "string", "enum": ["low", "medium", "high", "urgent"] },
+        "startDate": { "type": "string", "maxLength": 20 },
+        "deadline": { "type": "string", "maxLength": 20 },
+        "progress": { "type": "number" },
+        "goalId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "name",
+        "description",
+        "status",
+        "priority",
+        "startDate",
+        "deadline",
+        "progress",
+        "goalId",
+        "category",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "High-level personal goal with milestones and progress tracking.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "category": { "type": "string", "maxLength": 60 },
+        "deadline": { "type": "string", "maxLength": 20 },
+        "progress": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "completed", "paused", "locked"] },
+        "milestones": { "type": "array" },
+        "targetMetric": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "description",
+        "category",
+        "deadline",
+        "progress",
+        "status",
+        "milestones",
+        "targetMetric",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Scheduled calendar event, appointment, deadline, or fixed commitment.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "date": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "startTime": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "endTime": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "eventType": { "type": "string", "enum": ["event", "appointment", "meeting", "deadline", "fixed_commitment", "time_block"] },
+        "location": { "type": "string", "maxLength": 200 },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "taskId": { "type": "string", "maxLength": 128 },
+        "isFixed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "description",
+        "date",
+        "startTime",
+        "endTime",
+        "eventType",
+        "location",
+        "notes",
+        "projectId",
+        "taskId",
+        "isFixed",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "Second Brain knowledge note with tags, categories, and project/goal links.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "content": { "type": "string", "maxLength": 15000 },
+        "category": { "type": "string", "maxLength": 60 },
+        "tags": { "type": "array" },
+        "isPinned": { "type": "boolean" },
+        "isArchived": { "type": "boolean" },
+        "projectId": { "type": "string", "maxLength": 128 },
+        "goalId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "content",
+        "category",
+        "tags",
+        "isPinned",
+        "isArchived",
+        "projectId",
+        "goalId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Habit": {
+      "title": "Habit",
+      "description": "Recurring habit with streak counter, completion log, and goal linkage.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "description": { "type": "string", "maxLength": 500 },
+        "category": { "type": "string", "maxLength": 60 },
+        "frequency": { "type": "string", "enum": ["daily", "weekdays", "weekly"] },
+        "targetPerWeek": { "type": "number" },
+        "currentStreak": { "type": "number" },
+        "bestStreak": { "type": "number" },
+        "completedDates": { "type": "array" },
+        "linkedGoalId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "description",
+        "category",
+        "frequency",
+        "targetPerWeek",
+        "currentStreak",
+        "bestStreak",
+        "completedDates",
+        "linkedGoalId",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LearningItem": {
+      "title": "LearningItem",
+      "description": "Subject, skill, or course tracked in the Learning module.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "itemType": { "type": "string", "enum": ["subject", "skill", "course", "resource"] },
+        "category": { "type": "string", "maxLength": 60 },
+        "status": { "type": "string", "enum": ["active", "completed", "paused", "locked"] },
+        "progress": { "type": "number" },
+        "totalHoursLogged": { "type": "number" },
+        "targetHours": { "type": "number" },
+        "resourceUrl": { "type": "string", "maxLength": 500 },
+        "notes": { "type": "string", "maxLength": 5000 },
+        "linkedGoalId": { "type": "string", "maxLength": 128 },
+        "lastStudiedDate": { "type": "string", "maxLength": 20 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "itemType",
+        "category",
+        "status",
+        "progress",
+        "totalHoursLogged",
+        "targetHours",
+        "resourceUrl",
+        "notes",
+        "linkedGoalId",
+        "lastStudiedDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "FinanceTransaction": {
+      "title": "FinanceTransaction",
+      "description": "Personal finance income, expense, or savings entry.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 150 },
+        "amount": { "type": "number" },
+        "transactionType": { "type": "string", "enum": ["income", "expense", "savings"] },
+        "category": { "type": "string", "maxLength": 60 },
+        "date": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "financialGoalTitle": { "type": "string", "maxLength": 150 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "title",
+        "amount",
+        "transactionType",
+        "category",
+        "date",
+        "notes",
+        "financialGoalTitle",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "DailyPlan": {
+      "title": "DailyPlan",
+      "description": "AI-generated and user-controlled daily schedule, priority list, and overload status.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "date": { "type": "string", "minLength": 1, "maxLength": 20 },
+        "status": { "type": "string", "enum": ["draft", "active", "completed", "locked"] },
+        "userInput": { "type": "string", "maxLength": 3000 },
+        "aiSummary": { "type": "string", "maxLength": 3000 },
+        "isOverloaded": { "type": "boolean" },
+        "overloadMessage": { "type": "string", "maxLength": 1000 },
+        "blocks": { "type": "array" },
+        "priorities": { "type": "array" },
+        "endOfDayReview": { "type": "string", "maxLength": 3000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "date",
+        "status",
+        "userInput",
+        "aiSummary",
+        "isOverloaded",
+        "overloadMessage",
+        "blocks",
+        "priorities",
+        "endOfDayReview",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Private user profile and LIFE OS preferences isolated by userId."
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User tasks isolated by userId."
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "User projects isolated by userId."
+    },
+    "/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "User goals isolated by userId."
+    },
+    "/events/{eventId}": {
+      "schema": "CalendarEvent",
+      "description": "User calendar events isolated by userId."
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User second-brain notes isolated by userId."
+    },
+    "/habits/{habitId}": {
+      "schema": "Habit",
+      "description": "User habits and streaks isolated by userId."
+    },
+    "/learning/{learningId}": {
+      "schema": "LearningItem",
+      "description": "User learning subjects, skills, and courses isolated by userId."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "FinanceTransaction",
+      "description": "User personal finance transactions isolated by userId."
+    },
+    "/dailyPlans/{planId}": {
+      "schema": "DailyPlan",
+      "description": "User AI daily plans and schedules isolated by userId."
+    }
+  }
+}

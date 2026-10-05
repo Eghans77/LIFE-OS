@@ -1,0 +1,10 @@
+{
+  "name": "LIFE OS",
+  "description": "Private AI-powered personal Life Management Operating System to capture, organize, plan, execute, review, and improve your daily life.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

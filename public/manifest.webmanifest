@@ -1,0 +1,31 @@
+{
+  "id": "/",
+  "name": "LIFE OS — Personal Command Center",
+  "short_name": "LIFE OS",
+  "description": "Private AI-powered personal Life Management Operating System to capture, organize, plan, execute, review, and improve your daily life.",
+  "theme_color": "#171123",
+  "background_color": "#171123",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

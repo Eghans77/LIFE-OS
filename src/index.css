@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@theme {
+  /* Uploaded Color Combo 01 Palette:
+     1. #6F2DBD — Royal Purple (Primary CTA & Interactive Accent)
+     2. #A663CC — Luminous Amethyst (Secondary Accent, Icons, Progress & Highlights)
+     3. #171123 — Deep Midnight Violet-Obsidian (Dominant Background Canvas)
+     4. #FBFBFB — Pure Alabaster White (Primary Text & High-Contrast Foreground)
+  */
+  --color-white: #FBFBFB;
+
+  --color-slate-950: #171123;
+  --color-slate-900: #211832;
+  --color-slate-800: #31234B;
+  --color-slate-700: #46316B;
+  --color-slate-600: #634892;
+  --color-slate-500: #8B72B0;
+  --color-slate-400: #B99FD8;
+  --color-slate-300: #D7C7EB;
+  --color-slate-200: #ECE4F6;
+  --color-slate-100: #FBFBFB;
+  --color-slate-50: #FBFBFB;
+
+  /* Accent Mapping to #6F2DBD, #A663CC, #171123, #FBFBFB */
+  --color-emerald-950: #171123;
+  --color-emerald-900: #26173E;
+  --color-emerald-800: #3E1F6B;
+  --color-emerald-700: #582499;
+  --color-emerald-600: #6F2DBD;
+  --color-emerald-500: #A663CC;
+  --color-emerald-400: #A663CC;
+  --color-emerald-300: #D7B0F0;
+  --color-emerald-200: #FBFBFB;
+
+  --color-sky-400: #A663CC;
+}
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #171123;
+    color: #FBFBFB;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.005em;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Smooth global micro-interactions on interactive elements */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition: all 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  button:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+}
+
+/* Primary button styling using #6F2DBD -> #A663CC on hover with #FBFBFB / #171123 contrast */
+.bg-emerald-600 {
+  background-color: #6F2DBD;
+  color: #FBFBFB;
+  border: 1px solid rgba(166, 99, 204, 0.45);
+  box-shadow: 0 6px 20px -6px rgba(111, 45, 189, 0.55);
+}
+
+.bg-emerald-600:hover:not(:disabled) {
+  background-color: #A663CC;
+  color: #171123;
+  border-color: #FBFBFB;
+  box-shadow: 0 8px 24px -4px rgba(166, 99, 204, 0.5);
+  transform: translateY(-1px);
+}
+
+/* Interactive surface elevation transition */
+.surface-interactive {
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 260ms cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.surface-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgba(166, 99, 204, 0.45);
+  box-shadow: 0 14px 32px -12px rgba(15, 8, 28, 0.75);
+}
+
+/* Custom subtle scrollbars in #6F2DBD & #A663CC */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #171123;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #6F2DBD;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #A663CC;
+}

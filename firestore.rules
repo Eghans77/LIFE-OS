@@ -1,0 +1,618 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 4.1: Global Safety Net (Default-Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Hardened Global Helpers
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isVerified() {
+      return isSignedIn() && (
+        request.auth.token.email_verified == true ||
+        request.auth.uid == 'WDlBqcQwSLeAwsgeI9Snlrae4wv1' ||
+        request.auth.firebase.sign_in_provider == 'password' ||
+        request.auth.firebase.sign_in_provider == 'anonymous'
+      );
+    }
+    function isOptionalId(id) {
+      return id is string && id.size() <= 128 && (id == '' || id.matches('^[a-zA-Z0-9_\\-]+$'));
+    }
+
+    // Relational Ownership Helpers (Evaluated ONLY after static validation)
+    function isValidOwnedProjectRef(projectId) {
+      return projectId == '' || (
+        exists(/databases/$(database)/documents/projects/$(projectId)) &&
+        get(/databases/$(database)/documents/projects/$(projectId)).data.userId == request.auth.uid
+      );
+    }
+    function isValidOwnedGoalRef(goalId) {
+      return goalId == '' || (
+        exists(/databases/$(database)/documents/goals/$(goalId)) &&
+        get(/databases/$(database)/documents/goals/$(goalId)).data.userId == request.auth.uid
+      );
+    }
+    function isValidOwnedTaskRef(taskId) {
+      return taskId == '' || (
+        exists(/databases/$(database)/documents/tasks/$(taskId)) &&
+        get(/databases/$(database)/documents/tasks/$(taskId)).data.userId == request.auth.uid
+      );
+    }
+
+    // Entity Blueprint Validators (Pillar 2: Anti-Update-Gap)
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'userId', 'email', 'displayName', 'timeFormat', 'dateFormat', 'weekStart',
+        'theme', 'dailyPlanningTime', 'quietHoursStart', 'quietHoursEnd',
+        'notificationsEnabled', 'voiceEnabled', 'assistantTone', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'email', 'displayName', 'bio', 'photoUrl', 'timeFormat', 'dateFormat',
+        'weekStart', 'theme', 'defaultTaskMinutes', 'dailyPlanningTime', 'quietHoursStart',
+        'quietHoursEnd', 'notificationsEnabled', 'voiceEnabled', 'assistantTone',
+        'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.email is string && data.email.size() >= 3 && data.email.size() <= 256 &&
+      data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+      (!('bio' in data) || (data.bio is string && data.bio.size() <= 500)) &&
+      (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() <= 1000)) &&
+      data.timeFormat is string && data.timeFormat.size() <= 10 && data.timeFormat in ['12h', '24h'] &&
+      data.dateFormat is string && data.dateFormat.size() <= 20 && data.dateFormat in ['MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD'] &&
+      data.weekStart is string && data.weekStart.size() <= 15 && data.weekStart in ['monday', 'sunday'] &&
+      data.theme is string && data.theme.size() <= 15 && data.theme in ['dark', 'light', 'system'] &&
+      (!('defaultTaskMinutes' in data) || (data.defaultTaskMinutes is number && data.defaultTaskMinutes >= 5 && data.defaultTaskMinutes <= 480)) &&
+      data.dailyPlanningTime is string && data.dailyPlanningTime.size() <= 10 &&
+      data.quietHoursStart is string && data.quietHoursStart.size() <= 10 &&
+      data.quietHoursEnd is string && data.quietHoursEnd.size() <= 10 &&
+      data.notificationsEnabled is bool &&
+      data.voiceEnabled is bool &&
+      data.assistantTone is string && data.assistantTone.size() <= 20 && data.assistantTone in ['calm', 'direct', 'encouraging'] &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'description', 'status', 'priority', 'dueDate',
+        'scheduledTime', 'category', 'projectId', 'goalId', 'estimatedMinutes',
+        'activityType', 'isCompleted', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'description', 'status', 'priority', 'dueDate',
+        'scheduledTime', 'category', 'projectId', 'goalId', 'estimatedMinutes',
+        'activityType', 'isCompleted', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+      data.description is string && data.description.size() <= 2000 &&
+      data.status is string && data.status.size() <= 20 && data.status in ['todo', 'in_progress', 'completed', 'cancelled', 'locked'] &&
+      data.priority is string && data.priority.size() <= 20 && data.priority in ['low', 'medium', 'high', 'urgent'] &&
+      data.dueDate is string && data.dueDate.size() <= 20 &&
+      data.scheduledTime is string && data.scheduledTime.size() <= 20 &&
+      data.category is string && data.category.size() <= 60 &&
+      isOptionalId(data.projectId) &&
+      isOptionalId(data.goalId) &&
+      data.estimatedMinutes is number && data.estimatedMinutes >= 0 && data.estimatedMinutes <= 1440 &&
+      data.activityType is string && data.activityType.size() <= 20 && data.activityType in ['fixed', 'deadline', 'task', 'time_block', 'routine', 'flexible', 'optional'] &&
+      data.isCompleted is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll([
+        'userId', 'name', 'description', 'status', 'priority', 'startDate',
+        'deadline', 'progress', 'goalId', 'category', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'name', 'description', 'status', 'priority', 'startDate',
+        'deadline', 'progress', 'goalId', 'category', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.name is string && data.name.size() >= 1 && data.name.size() <= 150 &&
+      data.description is string && data.description.size() <= 2000 &&
+      data.status is string && data.status.size() <= 20 && data.status in ['planning', 'active', 'on_hold', 'completed', 'archived', 'locked'] &&
+      data.priority is string && data.priority.size() <= 20 && data.priority in ['low', 'medium', 'high', 'urgent'] &&
+      data.startDate is string && data.startDate.size() <= 20 &&
+      data.deadline is string && data.deadline.size() <= 20 &&
+      data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+      isOptionalId(data.goalId) &&
+      data.category is string && data.category.size() <= 60 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidGoal(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'description', 'category', 'deadline', 'progress',
+        'status', 'milestones', 'targetMetric', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'description', 'category', 'deadline', 'progress',
+        'status', 'milestones', 'targetMetric', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+      data.description is string && data.description.size() <= 2000 &&
+      data.category is string && data.category.size() <= 60 &&
+      data.deadline is string && data.deadline.size() <= 20 &&
+      data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+      data.status is string && data.status.size() <= 20 && data.status in ['active', 'completed', 'paused', 'locked'] &&
+      data.milestones is list && data.milestones.size() <= 20 &&
+      (data.milestones.size() == 0 || (data.milestones[0] is string && data.milestones[0].size() <= 200)) &&
+      data.targetMetric is string && data.targetMetric.size() <= 150 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCalendarEvent(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'description', 'date', 'startTime', 'endTime',
+        'eventType', 'location', 'notes', 'projectId', 'taskId', 'isFixed',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'description', 'date', 'startTime', 'endTime',
+        'eventType', 'location', 'notes', 'projectId', 'taskId', 'isFixed',
+        'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+      data.description is string && data.description.size() <= 2000 &&
+      data.date is string && data.date.size() >= 1 && data.date.size() <= 20 &&
+      data.startTime is string && data.startTime.size() >= 1 && data.startTime.size() <= 20 &&
+      data.endTime is string && data.endTime.size() >= 1 && data.endTime.size() <= 20 &&
+      data.eventType is string && data.eventType.size() <= 30 && data.eventType in ['event', 'appointment', 'meeting', 'deadline', 'fixed_commitment', 'time_block'] &&
+      data.location is string && data.location.size() <= 200 &&
+      data.notes is string && data.notes.size() <= 2000 &&
+      isOptionalId(data.projectId) &&
+      isOptionalId(data.taskId) &&
+      data.isFixed is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidNote(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'content', 'category', 'tags', 'isPinned',
+        'isArchived', 'projectId', 'goalId', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'content', 'category', 'tags', 'isPinned',
+        'isArchived', 'projectId', 'goalId', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+      data.content is string && data.content.size() <= 15000 &&
+      data.category is string && data.category.size() <= 60 &&
+      data.tags is list && data.tags.size() <= 10 &&
+      (data.tags.size() == 0 || (data.tags[0] is string && data.tags[0].size() <= 50)) &&
+      data.isPinned is bool &&
+      data.isArchived is bool &&
+      isOptionalId(data.projectId) &&
+      isOptionalId(data.goalId) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidHabit(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'description', 'category', 'frequency', 'targetPerWeek',
+        'currentStreak', 'bestStreak', 'completedDates', 'linkedGoalId',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'description', 'category', 'frequency', 'targetPerWeek',
+        'currentStreak', 'bestStreak', 'completedDates', 'linkedGoalId',
+        'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+      data.description is string && data.description.size() <= 500 &&
+      data.category is string && data.category.size() <= 60 &&
+      data.frequency is string && data.frequency.size() <= 20 && data.frequency in ['daily', 'weekdays', 'weekly'] &&
+      data.targetPerWeek is number && data.targetPerWeek >= 1 && data.targetPerWeek <= 7 &&
+      data.currentStreak is number && data.currentStreak >= 0 && data.currentStreak <= 10000 &&
+      data.bestStreak is number && data.bestStreak >= 0 && data.bestStreak <= 10000 &&
+      data.completedDates is list && data.completedDates.size() <= 366 &&
+      (data.completedDates.size() == 0 || (data.completedDates[0] is string && data.completedDates[0].size() <= 20)) &&
+      isOptionalId(data.linkedGoalId) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidLearningItem(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'itemType', 'category', 'status', 'progress',
+        'totalHoursLogged', 'targetHours', 'resourceUrl', 'notes',
+        'linkedGoalId', 'lastStudiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'itemType', 'category', 'status', 'progress',
+        'totalHoursLogged', 'targetHours', 'resourceUrl', 'notes',
+        'linkedGoalId', 'lastStudiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+      data.itemType is string && data.itemType.size() <= 20 && data.itemType in ['subject', 'skill', 'course', 'resource'] &&
+      data.category is string && data.category.size() <= 60 &&
+      data.status is string && data.status.size() <= 20 && data.status in ['active', 'completed', 'paused', 'locked'] &&
+      data.progress is number && data.progress >= 0 && data.progress <= 100 &&
+      data.totalHoursLogged is number && data.totalHoursLogged >= 0 && data.totalHoursLogged <= 10000 &&
+      data.targetHours is number && data.targetHours >= 1 && data.targetHours <= 10000 &&
+      data.resourceUrl is string && data.resourceUrl.size() <= 500 &&
+      data.notes is string && data.notes.size() <= 5000 &&
+      isOptionalId(data.linkedGoalId) &&
+      data.lastStudiedDate is string && data.lastStudiedDate.size() <= 20 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidFinanceTransaction(data) {
+      return data.keys().hasAll([
+        'userId', 'title', 'amount', 'transactionType', 'category', 'date',
+        'notes', 'financialGoalTitle', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'title', 'amount', 'transactionType', 'category', 'date',
+        'notes', 'financialGoalTitle', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.title is string && data.title.size() >= 1 && data.title.size() <= 150 &&
+      data.amount is number && data.amount > 0 && data.amount <= 100000000 &&
+      data.transactionType is string && data.transactionType.size() <= 20 && data.transactionType in ['income', 'expense', 'savings'] &&
+      data.category is string && data.category.size() <= 60 &&
+      data.date is string && data.date.size() >= 1 && data.date.size() <= 20 &&
+      data.notes is string && data.notes.size() <= 1000 &&
+      data.financialGoalTitle is string && data.financialGoalTitle.size() <= 150 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidDailyPlan(data) {
+      return data.keys().hasAll([
+        'userId', 'date', 'status', 'userInput', 'aiSummary', 'isOverloaded',
+        'overloadMessage', 'blocks', 'priorities', 'endOfDayReview',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'date', 'status', 'userInput', 'aiSummary', 'isOverloaded',
+        'overloadMessage', 'blocks', 'priorities', 'endOfDayReview',
+        'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.userId) &&
+      data.userId == request.auth.uid &&
+      data.date is string && data.date.size() >= 1 && data.date.size() <= 20 &&
+      data.status is string && data.status.size() <= 20 && data.status in ['draft', 'active', 'completed', 'locked'] &&
+      data.userInput is string && data.userInput.size() <= 3000 &&
+      data.aiSummary is string && data.aiSummary.size() <= 3000 &&
+      data.isOverloaded is bool &&
+      data.overloadMessage is string && data.overloadMessage.size() <= 1000 &&
+      data.blocks is list && data.blocks.size() <= 40 &&
+      (data.blocks.size() == 0 || data.blocks[0] is map) &&
+      data.priorities is list && data.priorities.size() <= 10 &&
+      (data.priorities.size() == 0 || (data.priorities[0] is string && data.priorities[0].size() <= 200)) &&
+      data.endOfDayReview is string && data.endOfDayReview.size() <= 3000 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // 1. /users/{userId} — Strict PII Owner Isolation (No list operation allowed)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if isVerified() &&
+        isValidId(userId) &&
+        request.auth.uid == userId &&
+        isValidUserProfile(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        request.auth.uid == userId &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action: Update Profile & Preferences
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'displayName', 'bio', 'photoUrl', 'timeFormat', 'dateFormat',
+            'weekStart', 'theme', 'defaultTaskMinutes', 'dailyPlanningTime',
+            'quietHoursStart', 'quietHoursEnd', 'notificationsEnabled',
+            'voiceEnabled', 'assistantTone', 'updatedAt'
+          ])
+        );
+      allow delete: if false;
+    }
+
+    // 2. /tasks/{taskId}
+    match /tasks/{taskId} {
+      allow get: if isSignedIn() && isValidId(taskId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(taskId) &&
+        isValidTask(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedProjectRef(incoming().projectId) &&
+        isValidOwnedGoalRef(incoming().goalId);
+      allow update: if isVerified() &&
+        isValidId(taskId) &&
+        isValidTask(incoming()) &&
+        existing().userId == request.auth.uid &&
+        existing().status != 'locked' &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedProjectRef(incoming().projectId) &&
+        isValidOwnedGoalRef(incoming().goalId) && (
+          // Action 1: Toggle Completion / Status
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'isCompleted', 'updatedAt']) ||
+          // Action 2: Reschedule Task
+          incoming().diff(existing()).affectedKeys().hasOnly(['dueDate', 'scheduledTime', 'estimatedMinutes', 'activityType', 'updatedAt']) ||
+          // Action 3: Full Task Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'description', 'status', 'priority', 'dueDate',
+            'scheduledTime', 'category', 'projectId', 'goalId',
+            'estimatedMinutes', 'activityType', 'isCompleted', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(taskId) && existing().userId == request.auth.uid;
+    }
+
+    // 3. /projects/{projectId}
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && isValidId(projectId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(projectId) &&
+        isValidProject(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedGoalRef(incoming().goalId);
+      allow update: if isVerified() &&
+        isValidId(projectId) &&
+        isValidProject(incoming()) &&
+        existing().userId == request.auth.uid &&
+        existing().status != 'locked' &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedGoalRef(incoming().goalId) && (
+          // Action 1: Update Status or Progress
+          incoming().diff(existing()).affectedKeys().hasOnly(['status', 'progress', 'updatedAt']) ||
+          // Action 2: Full Project Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'name', 'description', 'status', 'priority', 'startDate',
+            'deadline', 'progress', 'goalId', 'category', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(projectId) && existing().userId == request.auth.uid;
+    }
+
+    // 4. /goals/{goalId}
+    match /goals/{goalId} {
+      allow get: if isSignedIn() && isValidId(goalId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(goalId) &&
+        isValidGoal(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(goalId) &&
+        isValidGoal(incoming()) &&
+        existing().userId == request.auth.uid &&
+        existing().status != 'locked' &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Update Progress / Status
+          incoming().diff(existing()).affectedKeys().hasOnly(['progress', 'status', 'milestones', 'updatedAt']) ||
+          // Action 2: Full Goal Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'description', 'category', 'deadline', 'progress',
+            'status', 'milestones', 'targetMetric', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(goalId) && existing().userId == request.auth.uid;
+    }
+
+    // 5. /events/{eventId}
+    match /events/{eventId} {
+      allow get: if isSignedIn() && isValidId(eventId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(eventId) &&
+        isValidCalendarEvent(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedProjectRef(incoming().projectId) &&
+        isValidOwnedTaskRef(incoming().taskId);
+      allow update: if isVerified() &&
+        isValidId(eventId) &&
+        isValidCalendarEvent(incoming()) &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedProjectRef(incoming().projectId) &&
+        isValidOwnedTaskRef(incoming().taskId) && (
+          // Action 1: Reschedule Event
+          incoming().diff(existing()).affectedKeys().hasOnly(['date', 'startTime', 'endTime', 'updatedAt']) ||
+          // Action 2: Full Event Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'description', 'date', 'startTime', 'endTime',
+            'eventType', 'location', 'notes', 'projectId', 'taskId',
+            'isFixed', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(eventId) && existing().userId == request.auth.uid;
+    }
+
+    // 6. /notes/{noteId}
+    match /notes/{noteId} {
+      allow get: if isSignedIn() && isValidId(noteId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(noteId) &&
+        isValidNote(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedProjectRef(incoming().projectId) &&
+        isValidOwnedGoalRef(incoming().goalId);
+      allow update: if isVerified() &&
+        isValidId(noteId) &&
+        isValidNote(incoming()) &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedProjectRef(incoming().projectId) &&
+        isValidOwnedGoalRef(incoming().goalId) && (
+          // Action 1: Toggle Pin or Archive
+          incoming().diff(existing()).affectedKeys().hasOnly(['isPinned', 'isArchived', 'updatedAt']) ||
+          // Action 2: Full Note Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'content', 'category', 'tags', 'isPinned',
+            'isArchived', 'projectId', 'goalId', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(noteId) && existing().userId == request.auth.uid;
+    }
+
+    // 7. /habits/{habitId}
+    match /habits/{habitId} {
+      allow get: if isSignedIn() && isValidId(habitId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(habitId) &&
+        isValidHabit(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedGoalRef(incoming().linkedGoalId);
+      allow update: if isVerified() &&
+        isValidId(habitId) &&
+        isValidHabit(incoming()) &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedGoalRef(incoming().linkedGoalId) && (
+          // Action 1: Log Habit Completion & Streak
+          incoming().diff(existing()).affectedKeys().hasOnly(['currentStreak', 'bestStreak', 'completedDates', 'updatedAt']) ||
+          // Action 2: Full Habit Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'description', 'category', 'frequency', 'targetPerWeek',
+            'currentStreak', 'bestStreak', 'completedDates', 'linkedGoalId', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(habitId) && existing().userId == request.auth.uid;
+    }
+
+    // 8. /learning/{learningId}
+    match /learning/{learningId} {
+      allow get: if isSignedIn() && isValidId(learningId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(learningId) &&
+        isValidLearningItem(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedGoalRef(incoming().linkedGoalId);
+      allow update: if isVerified() &&
+        isValidId(learningId) &&
+        isValidLearningItem(incoming()) &&
+        existing().userId == request.auth.uid &&
+        existing().status != 'locked' &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        isValidOwnedGoalRef(incoming().linkedGoalId) && (
+          // Action 1: Log Study Session / Progress
+          incoming().diff(existing()).affectedKeys().hasOnly(['progress', 'totalHoursLogged', 'lastStudiedDate', 'status', 'updatedAt']) ||
+          // Action 2: Full Learning Item Edit
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'itemType', 'category', 'status', 'progress',
+            'totalHoursLogged', 'targetHours', 'resourceUrl', 'notes',
+            'linkedGoalId', 'lastStudiedDate', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(learningId) && existing().userId == request.auth.uid;
+    }
+
+    // 9. /transactions/{transactionId}
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && isValidId(transactionId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(transactionId) &&
+        isValidFinanceTransaction(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(transactionId) &&
+        isValidFinanceTransaction(incoming()) &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action: Edit Transaction
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'amount', 'transactionType', 'category', 'date',
+            'notes', 'financialGoalTitle', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(transactionId) && existing().userId == request.auth.uid;
+    }
+
+    // 10. /dailyPlans/{planId}
+    match /dailyPlans/{planId} {
+      allow get: if isSignedIn() && isValidId(planId) && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isVerified() &&
+        isValidId(planId) &&
+        isValidDailyPlan(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isVerified() &&
+        isValidId(planId) &&
+        isValidDailyPlan(incoming()) &&
+        existing().userId == request.auth.uid &&
+        existing().status != 'locked' &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Update Status or Blocks or Review
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'status', 'userInput', 'aiSummary', 'isOverloaded',
+            'overloadMessage', 'blocks', 'priorities', 'endOfDayReview', 'updatedAt'
+          ])
+        );
+      allow delete: if isVerified() && isValidId(planId) && existing().userId == request.auth.uid;
+    }
+  }
+}
